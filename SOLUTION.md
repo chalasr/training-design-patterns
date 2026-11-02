@@ -1,25 +1,36 @@
-# Étape 5 : solution du TP 5 (Observer)
+# Étape 6 : solution du TP 6 (Strategy)
 
-- `events.py` :
-  - `OrderStatusChanged` est l'événement, qui porte la commande ;
-  - `Publisher` est le sujet : `subscribe()` enregistre un abonné, `notify()` prévient les abonnés dans l'ordre d'abonnement.
-- `OrderService` ne connaît plus que le `Publisher`. Le SMS, la cuisine et la fidélité sont des abonnés, dans `subscribers.py` : `SmsNotifier`, `KitchenDisplay`, `LoyaltyRewarder`.
-- `CourierDispatch` s'ajoute avec une classe et une ligne dans `create_app()`. `OrderService` n'a pas changé : c'est l'objectif du TP.
-- Un abonné est **n'importe quel callable** qui reçoit l'événement. Les abonnés de Pronto sont des classes à `__call__`, parce qu'ils ont une dépendance (l'écran, le programme de fidélité) ; une `lambda` suffit dans les tests.
-- `KITCHEN_SCREEN` et `LOYALTY` ne sont plus globaux : `create_app()` les crée et les donne aux abonnés. `OUTBOX` reste global, parce qu'il simule le monde extérieur.
-- Un abonné qui lève une exception est journalisé (`logging.exception`) puis ignoré. Le changement d'état est déjà enregistré, et les autres abonnés sont prévenus.
+- `Promotion` est la stratégie : `discount(order)` rend la remise en centimes, ou lève `PromotionRefused`.
+- Les stratégies concrètes sont `StudentDiscount`, `HappyHour`, `ThreeForTwo` et `TuesdayDeal`. Elles portent leurs paramètres (`percent`, `hour`, `per_pizza`) : le taux de la remise étudiante change sans toucher au code.
+- `PROMOTIONS` associe chaque code à sa stratégie. `compute_total()` ne connaît plus aucune promotion : il choisit la stratégie par le code, puis calcule la livraison et le total.
+- `MARDI` s'ajoute avec une classe et une entrée dans `PROMOTIONS`. `compute_total()` n'a pas changé.
 
-## Les limites à connaître
+## La forme pythonique
 
-- Les abonnés s'exécutent **dans** `advance()`, l'un après l'autre : un abonné lent ralentit tout. En production, on publie dans une file (Celery, RQ) et les abonnés travaillent à part.
-- Le `Publisher` garde une référence forte vers chaque abonné. `blinker` utilise des références faibles par défaut, pour qu'un abonné oublié ne reste pas en vie.
-- Avalé sans bruit, une erreur est perdue : la journaliser est le minimum.
+Une stratégie sans état et à une seule méthode est une fonction :
 
-## Dans Flask et SQLAlchemy
+```python
+def three_for_two(order: Order) -> int:
+    prices = sorted(line.pizza.price for line in order.lines for _ in range(line.quantity))
+    return sum(prices[: len(prices) // 3])
 
-- `blinker`, sous les signaux de Flask : `request_started.connect(subscriber)`, puis `signal.send(app)`.
-- SQLAlchemy : `event.listen(Session, "before_flush", subscriber)`.
+
+PROMOTIONS: dict[str, Callable[[Order], int]] = {"3POUR2": three_for_two, ...}
+```
+
+Pour une stratégie paramétrée, `functools.partial(percent_off, 20)` ou une fonction qui renvoie une fonction suffisent.
+
+La classe redevient utile quand la stratégie a :
+- des paramètres qu'on veut afficher ou comparer (une `dataclass` figée les montre dans le `repr`) ;
+- plusieurs méthodes, par exemple un libellé pour la facture en plus du calcul ;
+- un état.
+
+## Dans votre quotidien
+
+- `sorted(orders, key=...)` : la clé de tri est une stratégie.
+- SQLAlchemy : `relationship(lazy="selectin")` choisit la stratégie de chargement des relations.
+- `tenacity` : `@retry(wait=wait_exponential())` choisit la stratégie d'attente.
 
 ## Ce qui reste
 
-`compute_total()` choisit la promotion dans un `if/elif`. Le TP 6 s'en occupe.
+Le panier ne sait pas annuler la dernière action. Le TP 7 s'en occupe.

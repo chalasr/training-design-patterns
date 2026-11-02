@@ -48,3 +48,19 @@ def test_the_cheapest_pizza_of_every_three_is_free():
 def test_an_unknown_code_is_refused():
     with pytest.raises(PromotionRefused):
         compute_total(an_order().with_pizza("reine").with_promo_code("GRATUIT").build())
+
+
+TUESDAY_NOON = datetime(2026, 11, 3, 12, 0)
+WEDNESDAY_NOON = datetime(2026, 11, 4, 12, 0)
+
+
+def test_on_tuesdays_each_pizza_is_2_euros_off():
+    order = an_order().with_pizza("reine", 2).with_promo_code("MARDI").placed_at(TUESDAY_NOON)
+
+    assert compute_total(order.build()).discount == 400
+
+
+def test_the_tuesday_code_gives_nothing_on_other_days():
+    order = an_order().with_pizza("reine", 2).with_promo_code("MARDI").placed_at(WEDNESDAY_NOON)
+
+    assert compute_total(order.build()).discount == 0
