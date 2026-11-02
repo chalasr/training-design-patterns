@@ -29,7 +29,16 @@ class Cart:
                 return
         raise NotInCart(pizza_name)
 
-    def apply_coupon(self, code: str) -> None:
+    def withdraw(self, pizza_name: str, quantity: int) -> None:
+        for line in self.lines:
+            if line.pizza.name == pizza_name:
+                line.quantity -= quantity
+                if line.quantity <= 0:
+                    self.lines.remove(line)
+                return
+        raise NotInCart(pizza_name)
+
+    def apply_coupon(self, code: str | None) -> None:
         self.promo_code = code
 
     def quantity_of(self, pizza_name: str) -> int:

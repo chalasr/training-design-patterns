@@ -1,36 +1,29 @@
-# Étape 6 : solution du TP 6 (Strategy)
+# Étape 7 : solution du TP 7 (Command)
 
-- `Promotion` est la stratégie : `discount(order)` rend la remise en centimes, ou lève `PromotionRefused`.
-- Les stratégies concrètes sont `StudentDiscount`, `HappyHour`, `ThreeForTwo` et `TuesdayDeal`. Elles portent leurs paramètres (`percent`, `hour`, `per_pizza`) : le taux de la remise étudiante change sans toucher au code.
-- `PROMOTIONS` associe chaque code à sa stratégie. `compute_total()` ne connaît plus aucune promotion : il choisit la stratégie par le code, puis calcule la livraison et le total.
-- `MARDI` s'ajoute avec une classe et une entrée dans `PROMOTIONS`. `compute_total()` n'a pas changé.
+- `CartCommand` est la commande : `execute()` et `undo()`.
+- Chaque commande concrète reçoit le panier (le récepteur) à sa création, et **mémorise ce qu'il faut pour s'annuler** :
+  - `AddPizza` connaît la quantité ajoutée : son annulation la retire avec `Cart.withdraw()`, sans toucher aux pizzas ajoutées avant ;
+  - `RemovePizza` retient la quantité qu'elle a retirée ;
+  - `ApplyCoupon` retient le code précédent.
+- `CartHistory` est l'invocateur. Il exécute les commandes et garde deux piles, les actions faites et les actions annulées. Une nouvelle action vide la seconde : on ne rétablit pas une action qui ne suit plus l'état du panier.
+- `Cart` a gagné `withdraw()`, l'opération inverse de `add()`. Ses autres méthodes n'ont pas changé, et `Cart` ne sait rien de l'historique.
+- Une commande qui échoue (retirer une pizza absente) lève son exception avant d'entrer dans l'historique.
+
+## Mémoriser l'action ou l'état ?
+
+- L'autre option est de mémoriser **l'état** du panier avant chaque action, avec `copy.deepcopy(cart)`. C'est le pattern Memento.
+- Elle est plus simple à écrire et ne peut pas se tromper sur l'inverse. En revanche, elle coûte une copie complète par action et ne dit pas **ce qui** a été fait.
+- La commande, elle, se journalise, se sérialise et se rejoue.
 
 ## La forme pythonique
 
-Une stratégie sans état et à une seule méthode est une fonction :
-
-```python
-def three_for_two(order: Order) -> int:
-    prices = sorted(line.pizza.price for line in order.lines for _ in range(line.quantity))
-    return sum(prices[: len(prices) // 3])
-
-
-PROMOTIONS: dict[str, Callable[[Order], int]] = {"3POUR2": three_for_two, ...}
-```
-
-Pour une stratégie paramétrée, `functools.partial(percent_off, 20)` ou une fonction qui renvoie une fonction suffisent.
-
-La classe redevient utile quand la stratégie a :
-- des paramètres qu'on veut afficher ou comparer (une `dataclass` figée les montre dans le `repr`) ;
-- plusieurs méthodes, par exemple un libellé pour la facture en plus du calcul ;
-- un état.
+Une commande sans annulation est un callable : `functools.partial(cart.add, "reine", 2)`, puis `command()`. C'est l'annulation, la mise en file ou la journalisation qui justifient la classe.
 
 ## Dans votre quotidien
 
-- `sorted(orders, key=...)` : la clé de tri est une stratégie.
-- SQLAlchemy : `relationship(lazy="selectin")` choisit la stratégie de chargement des relations.
-- `tenacity` : `@retry(wait=wait_exponential())` choisit la stratégie d'attente.
+- Une migration Alembic est une commande avec annulation : `upgrade()` et `downgrade()`. `alembic downgrade -1` est un `undo()`.
+- Une tâche Celery ou RQ est une commande mise en file, exécutée par un autre processus.
 
-## Ce qui reste
+## Bonus non corrigé
 
-Le panier ne sait pas annuler la dernière action. Le TP 7 s'en occupe.
+Les tickets de cuisine sérialisés (`PrepareOrder`) ne sont pas dans cette solution.
