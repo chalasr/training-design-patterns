@@ -20,7 +20,7 @@ def app() -> App:
 @pytest.fixture
 def receive_order(app):
     """Le point d'entrée des commandes, quel que soit le canal (les routes de l'application)."""
-    return app.intake.receive
+    return app.receive_order
 
 
 @pytest.fixture
