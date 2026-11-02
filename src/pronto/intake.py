@@ -5,8 +5,9 @@ from datetime import datetime
 from typing import Any, Protocol
 
 from pronto.countries import UnservedCountry, kit_for
-from pronto.menu import Pizza, make_custom_pizza, menu_pizza
+from pronto.menu import Pizza, menu_pizza
 from pronto.order import Customer, Order, OrderLine
+from pronto.pizza_builder import PizzaBuilder
 from pronto.service import OrderService
 
 PARTNER_SKUS = {
@@ -45,13 +46,15 @@ class WebReader:
             pizza: Pizza
             if "custom" in item:
                 custom = item["custom"]
-                pizza = make_custom_pizza(
-                    custom["size"],
-                    custom.get("dough", "classique"),
-                    custom.get("base", "tomate"),
-                    custom.get("toppings"),
-                    custom.get("left"),
-                    custom.get("right"),
+                pizza = (
+                    PizzaBuilder()
+                    .size(custom["size"])
+                    .dough(custom.get("dough", "classique"))
+                    .base(custom.get("base", "tomate"))
+                    .topping(*custom.get("toppings", []))
+                    .left(*custom.get("left", []))
+                    .right(*custom.get("right", []))
+                    .build()
                 )
             else:
                 pizza = menu_pizza(item["pizza"])

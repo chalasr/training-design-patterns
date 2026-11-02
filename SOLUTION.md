@@ -1,20 +1,26 @@
-# Étape 3 : solution du TP 3 (Abstract Factory)
+# Étape 4 : solution du TP 4 (Builder) et du kata Prototype
 
-- `countries.py` regroupe la famille de chaque pays :
-  - les trois produits : `PhoneValidator`, `SmsGateway`, `InvoiceFormatter` ;
-  - la fabrique abstraite `CountryKit` ;
-  - les fabriques concrètes `FranceKit`, `BelgiumKit` et `LuxembourgKit`.
-- Les trois `if country` ont disparu. Chaque lieu demande sa fabrique à `kit_for(country)`, puis le produit dont il a besoin. Un client belge ne peut plus recevoir un SMS français avec une facture belge : tout vient de la même fabrique.
-- Le Luxembourg s'ajoute avec deux classes (`LuxembourgKit`, `LuxSmsGateway`) et une entrée dans `KITS`. `intake.py`, `service.py` et `invoice.py` n'ont pas changé.
-- Les fabriques sont sans état : une instance par pays, créée une fois dans `KITS`. C'est une unicité **par construction**, pas un Singleton imposé par la classe.
+## Le Builder
 
-## Fallait-il une fabrique ?
+- `PizzaBuilder` construit la pizza sur mesure étape par étape : `size()`, `dough()`, `base()`, `topping()`, `left()`, `right()`, puis `build()`.
+- **Toutes** les règles sont vérifiées dans `build()`, au moment où la pizza est complète. C'est là seulement qu'on peut vérifier les règles qui portent sur l'ensemble : le total des garnitures, le moitié-moitié en taille L avec une garniture de chaque côté.
+- Deux règles manquaient dans `make_custom_pizza()` : la base n'était pas vérifiée, et une seule moitié garnie passait.
+- `build()` donne des **copies** des listes de garnitures. Le builder peut resservir sans que la pizza construite change.
+- `tests/builders.py` : `an_order().with_pizza("reine", 2).for_a_student().build()`. Les tests ne disent plus que ce qui compte pour eux, le reste prend une valeur par défaut.
 
-- Le validateur et la facture sont surtout de la **donnée** : un motif, un nom de société, un taux. Une `dataclass` figée par pays suffirait pour eux.
-- La fabrique se justifie par les passerelles SMS : en production, chacune parle à une API différente. C'est du **comportement**.
-- Elle se justifie aussi par la règle de cohérence : la famille vient d'un seul endroit.
-- SQLAlchemy procède de même : chaque `Dialect` fournit ses propres compilateurs (`statement_compiler`, `ddl_compiler`, `type_compiler_cls`), qui ne se mélangent jamais avec ceux d'un autre dialecte.
+## Fallait-il un Builder ?
+
+- Avec des arguments nommés (`custom_pizza(size="L", left=[...])`), l'appel serait aussi lisible.
+- Le Builder se justifie par la construction **en plusieurs étapes**, avec une validation d'ensemble à la fin. Ici, `WebReader` ajoute les garnitures au fil du JSON.
+- Une interface fluide (des méthodes qui renvoient `self`) n'est qu'une forme d'écriture. Le pattern, c'est de séparer la construction de l'objet construit.
+
+## Le kata Prototype
+
+- `copy.copy()` copie la commande, mais **pas ses listes** : les deux commandes partagent les mêmes `OrderLine`.
+- `reorder()` utilise désormais `dataclasses.replace()`, avec `copy.deepcopy()` pour les lignes. Il remet aussi l'état à `validée`.
+- `menu_pizza()` rendait **l'objet du menu lui-même** : une garniture ajoutée sur une pizza commandée s'ajoutait au menu. Le menu est maintenant un registre de prototypes : `menu_pizza()` rend une copie profonde du modèle.
+- Avec des objets immuables (`frozen=True`, des tuples), la question ne se pose plus : `replace()` suffit.
 
 ## Ce qui reste
 
-`OrderService` appelle encore en dur la passerelle SMS, l'écran de la cuisine et la fidélité. Le TP 5 s'en occupe.
+`OrderService` appelle encore en dur le SMS, la cuisine et la fidélité. Le TP 5 s'en occupe.

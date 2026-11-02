@@ -2,53 +2,49 @@ from datetime import datetime
 
 import pytest
 
-from pronto.menu import menu_pizza
-from pronto.order import Customer, Order, OrderLine
 from pronto.pricing import PromotionRefused, compute_total
+from tests.builders import an_order
 
-
-def order_of(*lines: tuple[str, int], promo_code=None, is_student=False, hour=12) -> Order:
-    return Order(
-        customer=Customer("Alice", "+33612345678", is_student=is_student),
-        channel="web",
-        placed_at=datetime(2026, 11, 3, hour, 0),
-        lines=[OrderLine(menu_pizza(name), quantity) for name, quantity in lines],
-        promo_code=promo_code,
-    )
+SIX_PM = datetime(2026, 11, 3, 18, 0)
+SEVEN_PM = datetime(2026, 11, 3, 19, 0)
 
 
 def test_delivery_is_charged_below_25_euros():
-    assert compute_total(order_of(("reine", 1))).delivery_fee == 250
+    assert compute_total(an_order().with_pizza("reine").build()).delivery_fee == 250
 
 
 def test_delivery_is_free_from_25_euros():
-    total = compute_total(order_of(("reine", 1), ("calzone", 1), ("margherita", 1)))
+    order = an_order().with_pizza("reine").with_pizza("calzone").with_pizza("margherita").build()
 
-    assert total.delivery_fee == 0
+    assert compute_total(order).delivery_fee == 0
 
 
 def test_students_get_20_percent_off():
-    total = compute_total(order_of(("reine", 2), promo_code="ETUDIANT", is_student=True))
+    order = an_order().with_pizza("reine", 2).with_promo_code("ETUDIANT").for_a_student().build()
 
-    assert total.discount == 440
+    assert compute_total(order).discount == 440
 
 
 def test_the_student_code_is_refused_to_non_students():
     with pytest.raises(PromotionRefused):
-        compute_total(order_of(("reine", 2), promo_code="ETUDIANT"))
+        compute_total(an_order().with_pizza("reine", 2).with_promo_code("ETUDIANT").build())
 
 
 def test_happy_hour_gives_10_percent_off_between_6_and_7_pm():
-    assert compute_total(order_of(("reine", 2), promo_code="HAPPYHOUR", hour=18)).discount == 220
-    assert compute_total(order_of(("reine", 2), promo_code="HAPPYHOUR", hour=19)).discount == 0
+    happy = an_order().with_pizza("reine", 2).with_promo_code("HAPPYHOUR")
+
+    assert compute_total(happy.placed_at(SIX_PM).build()).discount == 220
+    assert compute_total(happy.placed_at(SEVEN_PM).build()).discount == 0
 
 
 def test_the_cheapest_pizza_of_every_three_is_free():
-    total = compute_total(order_of(("reine", 2), ("margherita", 1), promo_code="3POUR2"))
+    order = (
+        an_order().with_pizza("reine", 2).with_pizza("margherita").with_promo_code("3POUR2").build()
+    )
 
-    assert total.discount == 900
+    assert compute_total(order).discount == 900
 
 
 def test_an_unknown_code_is_refused():
     with pytest.raises(PromotionRefused):
-        compute_total(order_of(("reine", 1), promo_code="GRATUIT"))
+        compute_total(an_order().with_pizza("reine").with_promo_code("GRATUIT").build())

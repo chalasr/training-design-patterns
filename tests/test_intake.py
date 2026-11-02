@@ -44,3 +44,16 @@ def test_a_kiosk_order_groups_identical_pizzas(receive_order):
 def test_an_unknown_channel_is_refused(receive_order):
     with pytest.raises(InvalidOrder):
         receive_order("fax", "2 reine", NOON)
+
+
+def test_a_web_order_can_contain_a_custom_pizza(receive_order):
+    order = receive_order(
+        "web",
+        {
+            "customer": {"name": "Alice", "phone": "+33612345678"},
+            "items": [{"custom": {"size": "L", "left": ["jambon"], "right": ["chevre", "miel"]}}],
+        },
+        NOON,
+    )
+
+    assert order.lines[0].pizza.price == 1750

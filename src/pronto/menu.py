@@ -1,3 +1,4 @@
+import copy
 from dataclasses import dataclass, field
 
 SIZE_PRICES = {"S": 800, "M": 1000, "L": 1300}
@@ -35,36 +36,4 @@ MENU: dict[str, Pizza] = {
 def menu_pizza(name: str) -> Pizza:
     if name not in MENU:
         raise ValueError(f"Pizza inconnue : {name}")
-    return MENU[name]
-
-
-def make_custom_pizza(
-    size: str,
-    dough: str = "classique",
-    base: str = "tomate",
-    toppings: list[str] | None = None,
-    left_toppings: list[str] | None = None,
-    right_toppings: list[str] | None = None,
-) -> Pizza:
-    toppings = toppings or []
-    left_toppings = left_toppings or []
-    right_toppings = right_toppings or []
-    if size not in SIZE_PRICES:
-        raise ValueError(f"Taille inconnue : {size}")
-    if dough not in DOUGHS:
-        raise ValueError(f"Pâte inconnue : {dough}")
-    if len(toppings) + len(left_toppings) + len(right_toppings) > MAX_TOPPINGS:
-        raise ValueError("Pas plus de 6 garnitures")
-    if (left_toppings or right_toppings) and size != "L":
-        raise ValueError("Moitié-moitié en taille L uniquement")
-    count = len(toppings) + len(left_toppings) + len(right_toppings)
-    return Pizza(
-        name="sur-mesure",
-        price=SIZE_PRICES[size] + count * TOPPING_PRICE,
-        size=size,
-        dough=dough,
-        base=base,
-        toppings=toppings,
-        left_toppings=left_toppings,
-        right_toppings=right_toppings,
-    )
+    return copy.deepcopy(MENU[name])
