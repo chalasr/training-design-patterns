@@ -1,31 +1,20 @@
-# Étape 2 : solution du TP 2 (Factory Method)
+# Étape 3 : solution du TP 3 (Abstract Factory)
 
-- **Ce qui varie** : la lecture du format reçu. **Ce qui ne varie pas** : vérifier la commande, puis l'enregistrer.
-- `OrderIntake.receive()` porte le traitement commun. Il obtient son lecteur par la méthode de fabrication `create_reader()`, que chaque canal redéfinit.
-- Le canal `kiosk` s'ajoute avec deux classes (`KioskReader`, `KioskIntake`) et une ligne dans `create_app()`. `OrderIntake.receive()` n'a pas changé : le code est ouvert à l'extension, fermé à la modification.
-- `App.receive_order()` joue le rôle des routes de l'application : un canal, un intake.
+- `countries.py` regroupe la famille de chaque pays :
+  - les trois produits : `PhoneValidator`, `SmsGateway`, `InvoiceFormatter` ;
+  - la fabrique abstraite `CountryKit` ;
+  - les fabriques concrètes `FranceKit`, `BelgiumKit` et `LuxembourgKit`.
+- Les trois `if country` ont disparu. Chaque lieu demande sa fabrique à `kit_for(country)`, puis le produit dont il a besoin. Un client belge ne peut plus recevoir un SMS français avec une facture belge : tout vient de la même fabrique.
+- Le Luxembourg s'ajoute avec deux classes (`LuxembourgKit`, `LuxSmsGateway`) et une entrée dans `KITS`. `intake.py`, `service.py` et `invoice.py` n'ont pas changé.
+- Les fabriques sont sans état : une instance par pays, créée une fois dans `KITS`. C'est une unicité **par construction**, pas un Singleton imposé par la classe.
 
-## La forme pythonique
+## Fallait-il une fabrique ?
 
-En Python, une classe est un callable : elle peut servir de fabrique sans sous-classe.
-
-```python
-class OrderIntake:
-    def __init__(self, service: OrderService, reader_class: type[OrderReader]) -> None:
-        self.service = service
-        self.reader_class = reader_class
-
-    def receive(self, payload: Any, now: datetime) -> Order:
-        received = self.reader_class().read(payload)
-        ...
-
-OrderIntake(service, reader_class=KioskReader)
-```
-
-Elle est plus courte, et c'est souvent le bon choix. La sous-classe se justifie quand le canal redéfinit **plusieurs** choses à la fois (son lecteur, son nom, une étape de validation...), ou quand le framework impose l'héritage.
-
-Flask fait les deux : `Flask.create_jinja_environment()` est une méthode de fabrication à redéfinir, `Flask.response_class` une classe passée en attribut.
+- Le validateur et la facture sont surtout de la **donnée** : un motif, un nom de société, un taux. Une `dataclass` figée par pays suffirait pour eux.
+- La fabrique se justifie par les passerelles SMS : en production, chacune parle à une API différente. C'est du **comportement**.
+- Elle se justifie aussi par la règle de cohérence : la famille vient d'un seul endroit.
+- SQLAlchemy procède de même : chaque `Dialect` fournit ses propres compilateurs (`statement_compiler`, `ddl_compiler`, `type_compiler_cls`), qui ne se mélangent jamais avec ceux d'un autre dialecte.
 
 ## Ce qui reste
 
-`OrderIntake.receive()` teste encore le pays du client. Le TP 3 s'en occupe.
+`OrderService` appelle encore en dur la passerelle SMS, l'écran de la cuisine et la fidélité. Le TP 5 s'en occupe.

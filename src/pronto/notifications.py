@@ -18,19 +18,6 @@ class SmsOutbox:
 OUTBOX = SmsOutbox()
 
 
-def send_sms(phone: str, message: str, country: str) -> None:
-    if country == "FR":
-        if not phone.startswith("+33"):
-            raise ValueError(f"Numéro français invalide : {phone}")
-        OUTBOX.sent.append(SentSms("SmsFrance", phone, message))
-    elif country == "BE":
-        if not phone.startswith("+32"):
-            raise ValueError(f"Numéro belge invalide : {phone}")
-        OUTBOX.sent.append(SentSms("BelSms", phone, message))
-    else:
-        raise ValueError(f"Pays non desservi : {country}")
-
-
 @dataclass
 class KitchenScreen:
     lines: list[str] = field(default_factory=list)

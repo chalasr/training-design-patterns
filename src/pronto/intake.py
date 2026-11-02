@@ -1,10 +1,10 @@
-import re
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
 
+from pronto.countries import UnservedCountry, kit_for
 from pronto.menu import Pizza, make_custom_pizza, menu_pizza
 from pronto.order import Customer, Order, OrderLine
 from pronto.service import OrderService
@@ -107,14 +107,12 @@ class OrderIntake(ABC):
         customer = received.customer
         if not received.lines:
             raise InvalidOrder("Une commande contient au moins une pizza")
-        if customer.country == "FR":
-            if not re.fullmatch(r"\+33[1-9]\d{8}", customer.phone):
-                raise InvalidOrder(f"Numéro français invalide : {customer.phone}")
-        elif customer.country == "BE":
-            if not re.fullmatch(r"\+32\d{8,9}", customer.phone):
-                raise InvalidOrder(f"Numéro belge invalide : {customer.phone}")
-        else:
-            raise InvalidOrder(f"Pays non desservi : {customer.country}")
+        try:
+            kit = kit_for(customer.country)
+        except UnservedCountry as error:
+            raise InvalidOrder(str(error)) from error
+        if not kit.create_phone_validator().is_valid(customer.phone):
+            raise InvalidOrder(f"Numéro invalide : {customer.phone}")
 
         order = Order(customer, self.channel, now, received.lines, received.promo_code)
         return self.service.place(order)

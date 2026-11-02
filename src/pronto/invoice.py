@@ -1,3 +1,4 @@
+from pronto.countries import kit_for
 from pronto.order import Order
 from pronto.pricing import compute_total
 
@@ -8,14 +9,9 @@ def euros(cents: int) -> str:
 
 def render_invoice(order: Order) -> str:
     total = compute_total(order)
-    if order.customer.country == "FR":
-        header = "Pronto France SAS - 12 rue de la Pâte, 75011 Paris"
-        vat_rate = 10
-    elif order.customer.country == "BE":
-        header = "Pronto Belgique SRL - 4 rue de la Mozzarella, 1000 Bruxelles"
-        vat_rate = 6
-    else:
-        raise ValueError(f"Pays non desservi : {order.customer.country}")
+    formatter = kit_for(order.customer.country).create_invoice_formatter()
+    header = formatter.header()
+    vat_rate = formatter.vat_rate()
 
     vat = total.amount * vat_rate // (100 + vat_rate)
     lines = [header, f"Commande n° {order.number}"]
