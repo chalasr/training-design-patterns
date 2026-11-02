@@ -1,35 +1,36 @@
 import pytest
 
-from pronto.database import Database
-from pronto.intake import OrderIntake
+from pronto.app import App, create_app
 from pronto.invoice import render_invoice
 from pronto.notifications import KITCHEN_SCREEN, LOYALTY, OUTBOX
-from pronto.repository import OrderRepository
-from pronto.service import OrderService
 
 
 @pytest.fixture(autouse=True)
-def fresh_state():
-    Database.reset_instance()
+def fresh_notifications():
     OUTBOX.sent.clear()
     KITCHEN_SCREEN.lines.clear()
     LOYALTY.points.clear()
 
 
 @pytest.fixture
-def receive_order():
+def app() -> App:
+    return create_app(":memory:")
+
+
+@pytest.fixture
+def receive_order(app):
     """Le point d'entrée des commandes, quel que soit le canal (les routes de l'application)."""
-    return OrderIntake().receive
+    return app.intake.receive
 
 
 @pytest.fixture
-def service():
-    return OrderService()
+def service(app):
+    return app.service
 
 
 @pytest.fixture
-def orders():
-    return OrderRepository()
+def orders(app):
+    return app.orders
 
 
 @pytest.fixture

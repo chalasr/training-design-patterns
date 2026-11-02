@@ -10,6 +10,9 @@ VARIANTS = [ConfigWithNew, ConfigWithMetaclass, get_config]
 def forget_instances():
     """Remettre les singletons à zéro entre deux tests : à vous de compléter."""
     yield
+    ConfigWithNew._instance = None
+    singletons.SingletonMeta._instances.clear()
+    get_config.cache_clear()
 
 
 @pytest.mark.parametrize("make", VARIANTS)

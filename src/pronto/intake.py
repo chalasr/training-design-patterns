@@ -19,8 +19,8 @@ class InvalidOrder(Exception):
 
 
 class OrderIntake:
-    def __init__(self) -> None:
-        self.service = OrderService()
+    def __init__(self, service: OrderService) -> None:
+        self.service = service
 
     def receive(self, channel: str, payload: Any, now: datetime) -> Order:
         if channel == "web":

@@ -9,8 +9,8 @@ class OrderAlreadyDelivered(Exception):
 
 
 class OrderService:
-    def __init__(self) -> None:
-        self.orders = OrderRepository()
+    def __init__(self, orders: OrderRepository) -> None:
+        self.orders = orders
 
     def place(self, order: Order) -> Order:
         compute_total(order)
