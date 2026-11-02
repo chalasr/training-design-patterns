@@ -2,14 +2,12 @@ import pytest
 
 from pronto.app import App, create_app
 from pronto.invoice import render_invoice
-from pronto.notifications import KITCHEN_SCREEN, LOYALTY, OUTBOX
+from pronto.notifications import OUTBOX
 
 
 @pytest.fixture(autouse=True)
-def fresh_notifications():
+def fresh_outbox():
     OUTBOX.sent.clear()
-    KITCHEN_SCREEN.lines.clear()
-    LOYALTY.points.clear()
 
 
 @pytest.fixture
@@ -44,10 +42,10 @@ def outbox():
 
 
 @pytest.fixture
-def kitchen_screen():
-    return KITCHEN_SCREEN
+def kitchen_screen(app):
+    return app.kitchen_screen
 
 
 @pytest.fixture
-def loyalty():
-    return LOYALTY
+def loyalty(app):
+    return app.loyalty

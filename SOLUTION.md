@@ -1,26 +1,25 @@
-# Étape 4 : solution du TP 4 (Builder) et du kata Prototype
+# Étape 5 : solution du TP 5 (Observer)
 
-## Le Builder
+- `events.py` :
+  - `OrderStatusChanged` est l'événement, qui porte la commande ;
+  - `Publisher` est le sujet : `subscribe()` enregistre un abonné, `notify()` prévient les abonnés dans l'ordre d'abonnement.
+- `OrderService` ne connaît plus que le `Publisher`. Le SMS, la cuisine et la fidélité sont des abonnés, dans `subscribers.py` : `SmsNotifier`, `KitchenDisplay`, `LoyaltyRewarder`.
+- `CourierDispatch` s'ajoute avec une classe et une ligne dans `create_app()`. `OrderService` n'a pas changé : c'est l'objectif du TP.
+- Un abonné est **n'importe quel callable** qui reçoit l'événement. Les abonnés de Pronto sont des classes à `__call__`, parce qu'ils ont une dépendance (l'écran, le programme de fidélité) ; une `lambda` suffit dans les tests.
+- `KITCHEN_SCREEN` et `LOYALTY` ne sont plus globaux : `create_app()` les crée et les donne aux abonnés. `OUTBOX` reste global, parce qu'il simule le monde extérieur.
+- Un abonné qui lève une exception est journalisé (`logging.exception`) puis ignoré. Le changement d'état est déjà enregistré, et les autres abonnés sont prévenus.
 
-- `PizzaBuilder` construit la pizza sur mesure étape par étape : `size()`, `dough()`, `base()`, `topping()`, `left()`, `right()`, puis `build()`.
-- **Toutes** les règles sont vérifiées dans `build()`, au moment où la pizza est complète. C'est là seulement qu'on peut vérifier les règles qui portent sur l'ensemble : le total des garnitures, le moitié-moitié en taille L avec une garniture de chaque côté.
-- Deux règles manquaient dans `make_custom_pizza()` : la base n'était pas vérifiée, et une seule moitié garnie passait.
-- `build()` donne des **copies** des listes de garnitures. Le builder peut resservir sans que la pizza construite change.
-- `tests/builders.py` : `an_order().with_pizza("reine", 2).for_a_student().build()`. Les tests ne disent plus que ce qui compte pour eux, le reste prend une valeur par défaut.
+## Les limites à connaître
 
-## Fallait-il un Builder ?
+- Les abonnés s'exécutent **dans** `advance()`, l'un après l'autre : un abonné lent ralentit tout. En production, on publie dans une file (Celery, RQ) et les abonnés travaillent à part.
+- Le `Publisher` garde une référence forte vers chaque abonné. `blinker` utilise des références faibles par défaut, pour qu'un abonné oublié ne reste pas en vie.
+- Avalé sans bruit, une erreur est perdue : la journaliser est le minimum.
 
-- Avec des arguments nommés (`custom_pizza(size="L", left=[...])`), l'appel serait aussi lisible.
-- Le Builder se justifie par la construction **en plusieurs étapes**, avec une validation d'ensemble à la fin. Ici, `WebReader` ajoute les garnitures au fil du JSON.
-- Une interface fluide (des méthodes qui renvoient `self`) n'est qu'une forme d'écriture. Le pattern, c'est de séparer la construction de l'objet construit.
+## Dans Flask et SQLAlchemy
 
-## Le kata Prototype
-
-- `copy.copy()` copie la commande, mais **pas ses listes** : les deux commandes partagent les mêmes `OrderLine`.
-- `reorder()` utilise désormais `dataclasses.replace()`, avec `copy.deepcopy()` pour les lignes. Il remet aussi l'état à `validée`.
-- `menu_pizza()` rendait **l'objet du menu lui-même** : une garniture ajoutée sur une pizza commandée s'ajoutait au menu. Le menu est maintenant un registre de prototypes : `menu_pizza()` rend une copie profonde du modèle.
-- Avec des objets immuables (`frozen=True`, des tuples), la question ne se pose plus : `replace()` suffit.
+- `blinker`, sous les signaux de Flask : `request_started.connect(subscriber)`, puis `signal.send(app)`.
+- SQLAlchemy : `event.listen(Session, "before_flush", subscriber)`.
 
 ## Ce qui reste
 
-`OrderService` appelle encore en dur le SMS, la cuisine et la fidélité. Le TP 5 s'en occupe.
+`compute_total()` choisit la promotion dans un `if/elif`. Le TP 6 s'en occupe.

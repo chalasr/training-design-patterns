@@ -34,5 +34,9 @@ class LoyaltyProgram:
         self.points[phone] = self.points.get(phone, 0) + points
 
 
-KITCHEN_SCREEN = KitchenScreen()
-LOYALTY = LoyaltyProgram()
+@dataclass
+class CourierBoard:
+    lines: list[str] = field(default_factory=list)
+
+    def post(self, text: str) -> None:
+        self.lines.append(text)
